@@ -1,12 +1,10 @@
 package me.brunogomes.easyCSV;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Pattern;
@@ -14,26 +12,45 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
+ * <h1>CSV Reader</h1>
+ * The CsvReader class is the main class of the library
+ * It's read a CSV file from a path and provides
+ * results in a raw List of Strings or in a List of a given Bean.
+ * <p>
+ * <b>Note:</b> Giving proper comments in your program makes it more
+ * user friendly and it is assumed as a high quality code.
  *
+ * @author  Bruno Oliveira
+ * @version 1.0
+ * @since   2016-03-06
  */
 public class CsvReader
 {
     private static final String STRING_EMPTY = "";
 
-    private List<String> fileRows;
     private String delimiterCharacter;
     private Stream<String> lines;
 
+    /**
+     *
+     * @param filePath
+     * @param charset
+     * @param delimiterCharacter
+     * @throws IOException
+     */
     public CsvReader(final Path filePath,
                      final Charset charset,
                      final String delimiterCharacter) throws IOException
     {
-        this.fileRows = Files.lines(filePath, charset)
-        .filter(line-> !line.isEmpty()).collect(Collectors.toList());
         this.delimiterCharacter = delimiterCharacter;
         this.lines = Files.lines(filePath, charset);
     }
 
+    /**
+     *
+     * @param filePath
+     * @throws IOException
+     */
     public CsvReader(Path filePath) throws IOException
     {
         this(filePath,StandardCharsets.UTF_8, FileDelimiter.COMA.getDelimiterCharacter());
@@ -41,36 +58,31 @@ public class CsvReader
 
     /**
      *
-     * @param clazz
+     * @param beanMapper
      * @param <T>
      * @return
      */
-    public <T> List<T> toBeanList(Class<T> clazz) throws IllegalAccessException, InstantiationException, NoSuchFieldException
-    {
-        List<String> header = getHeader();
-
-        List<T> toReturn = new ArrayList<>();
-
-        for(String row :fileRows.subList(1,fileRows.size()))
-        {
-            T beanObject = clazz.newInstance();
-
-            for(String headerField: header)
-            {
-                Field field = clazz.getDeclaredField(headerField);
-                field.setAccessible(true);
-                field.set(beanObject, row.split(delimiterCharacter)[header.indexOf(headerField)]);
-            }
-
-            toReturn.add(beanObject);
-        }
-
-        return toReturn;
-    }
-
-    public <T> List<T> toBeanFunctionalStyle(final Function<String, T> beanMapper)
+    public <T> List<T> mapLineToBean(final Function<String, T> beanMapper)
     {
         return lines.skip(1).map(beanMapper::apply).collect(Collectors.toList());
+    }
+
+    /**
+     *
+     * @return
+     */
+    public List<String> getLinesList()
+    {
+        return lines.collect(Collectors.toList());
+    }
+
+    /**
+     *
+     * @return
+     */
+    public Stream<String> getLinesStream()
+    {
+        return lines;
     }
 
     /**
@@ -80,7 +92,7 @@ public class CsvReader
     public List<String> getHeader()
     {
         return  Pattern.compile(delimiterCharacter)
-                        .splitAsStream(fileRows.stream().findFirst().orElse(STRING_EMPTY))
+                        .splitAsStream(lines.findFirst().orElse(STRING_EMPTY))
                         .collect(Collectors.toList());
     }
 }
